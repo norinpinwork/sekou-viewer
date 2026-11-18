@@ -100,6 +100,27 @@ dialog .chk input{width:auto}
 .empty .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
 /* detail */
 .detail{position:fixed;inset:0;z-index:40;background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch}
+.detail.fav{z-index:45}
+.favlists{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.favcard{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:pointer;display:flex;flex-direction:column}
+.favcard .covers{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;aspect-ratio:3/1;background:var(--soft)}
+.favcard .covers img{width:100%;height:100%;object-fit:cover;display:block}
+.favcard .fb{padding:10px 12px}
+.favcard .fn{font-weight:700;font-size:16px}
+.favtools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.favname{font-size:17px;font-weight:700;border:1px solid transparent;background:transparent;border-radius:8px;padding:6px 8px;min-width:0;flex:1 1 220px}
+.favname:hover,.favname:focus{border-color:var(--line);background:var(--panel);outline:none}
+.pitem .star{position:absolute;right:6px;top:6px;color:#f5c542;font-size:18px;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.pitem .ed{position:absolute;inset:auto 0 0 0;display:flex;justify-content:space-between;padding:4px;background:rgba(0,0,0,.55)}
+.pitem .ed button{border:0;background:rgba(255,255,255,.18);color:#fff;border-radius:6px;min-width:40px;min-height:36px;font-size:16px;cursor:pointer}
+.pitem .num{position:absolute;left:6px;top:6px;background:rgba(0,0,0,.6);color:#fff;font-size:12px;border-radius:6px;padding:1px 7px}
+.fdlists{display:flex;flex-direction:column;gap:6px;margin:12px 0 4px;max-height:45vh;overflow-y:auto}
+.fdrow{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;background:var(--panel);text-align:left;width:100%}
+.fdrow.on{border-color:var(--accent);background:var(--accent-soft)}
+.fdrow .st{font-size:18px;width:22px;text-align:center}
+.fdrow .nm{flex:1;font-weight:600}
+.fdrow .ct{font-size:12px;color:var(--sub)}
+#lbFav.on{color:#f5c542}
 .dhead{position:sticky;top:0;z-index:2;background:var(--panel);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top))}
 .dhead h2{font-size:17px;margin:0;flex:1;min-width:0;line-height:1.35}
 .dwrap{max-width:1200px;margin:0 auto;padding:16px}
@@ -186,6 +207,7 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
       <button class="clear" id="qClear" hidden aria-label="クリア">×</button>
     </div>
     <button class="btn" id="filterBtn" aria-expanded="true">絞り込み ▲</button>
+    <button class="btn" id="favBtn">★ お気に入り</button>
     <button class="btn" id="internalBtn" title="施主・販売店などの社内向け情報を表示/非表示">社内情報：非表示</button>
     <button class="btn" id="menuBtn" aria-label="メニュー">⋯ データ</button>
   </div>
@@ -252,10 +274,29 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
   </div>
 </main>
 
+<section class="detail fav" id="fav" hidden>
+  <div class="dhead">
+    <button class="btn" id="favBack">← 戻る</button>
+    <h2 id="favTitle">お気に入り</h2>
+    <span id="favHeadBtns"></span>
+  </div>
+  <div class="dwrap" id="favBody"></div>
+</section>
+
+<dialog id="favDlg">
+  <b id="fdTitle">リストに追加</b>
+  <div class="muted" id="fdSub" style="margin-top:4px"></div>
+  <div id="fdLists" class="fdlists"></div>
+  <label for="fdNew">新しいリスト（お得意様名など）</label>
+  <div style="display:flex;gap:8px"><input id="fdNew" placeholder="例：〇〇建設 様"><button class="btn primary" id="fdCreate">作って追加</button></div>
+  <div class="row"><button class="btn" id="fdClose">閉じる</button></div>
+</dialog>
+
 <section class="detail" id="detail" hidden>
   <div class="dhead">
     <button class="btn" id="dBack">← 一覧</button>
     <h2 id="dTitle"></h2>
+    <button class="btn small" id="dFav">★ リストに追加</button>
     <button class="btn small" id="dEdit">読み・種別を修正</button>
   </div>
   <div class="dwrap" id="dBody"></div>
@@ -264,6 +305,7 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
 <div class="lb" id="lb" hidden>
   <div class="top">
     <div class="t" id="lbTitle"></div>
+    <button class="ic" id="lbFav" aria-label="この写真をお気に入りに追加" title="お気に入りに追加">☆</button>
     <button class="ic" id="lbClose" aria-label="閉じる">×</button>
   </div>
   <div class="stage" id="lbStage">
@@ -324,6 +366,7 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
 
 <input type="file" id="dirInput" webkitdirectory directory multiple hidden>
 <input type="file" id="dataInput" hidden>
+<input type="file" id="favInput" hidden>
 
 <script>
 'use strict';
@@ -431,8 +474,13 @@ const statusText=(s,short)=>s.status==='ng'&&s.src==='chk'?(short?'✕ 要確認
 
 /* ================= IndexedDB ================= */
 let dbp=null;
-function db(){ if(dbp) return dbp; dbp=new Promise((res,rej)=>{const r=indexedDB.open('sekouPhotoViewer',1);
-  r.onupgradeneeded=()=>{const d=r.result; d.createObjectStore('sites',{keyPath:'id'}); const im=d.createObjectStore('images',{keyPath:'id'}); im.createIndex('site','siteId'); d.createObjectStore('edits',{keyPath:'key'});};
+function db(){ if(dbp) return dbp; dbp=new Promise((res,rej)=>{const r=indexedDB.open('sekouPhotoViewer',2);
+  r.onupgradeneeded=()=>{const d=r.result, has=n=>d.objectStoreNames.contains(n);
+    if(!has('sites')) d.createObjectStore('sites',{keyPath:'id'});
+    if(!has('images')){ const im=d.createObjectStore('images',{keyPath:'id'}); im.createIndex('site','siteId'); }
+    if(!has('edits')) d.createObjectStore('edits',{keyPath:'key'});
+    if(!has('favs')) d.createObjectStore('favs',{keyPath:'id'}); // お気に入りリスト（写真の取り込み直しでは消さない）
+  };
   r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);}); return dbp; }
 function req2p(r){return new Promise((res,rej)=>{r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
 async function tx(stores,mode,fn){const d=await db();return new Promise((res,rej)=>{const t=d.transaction(stores,mode);let out;Promise.resolve(fn(t)).then(v=>out=v,rej);t.oncomplete=()=>res(out);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error);});}
@@ -455,7 +503,12 @@ function ask(msg,yes='OK',no='キャンセル',alt=''){
 }
 const notice=msg=>ask(msg,'OK','');
 function pushView(){ if(!EMBEDDED) try{history.pushState({v:1},'');}catch(e){} }
-function goBack(){ if(!EMBEDDED){ history.back(); return; } if(!document.getElementById('lb').hidden) closeLB(); else if(!document.getElementById('detail').hidden) closeDetail(); }
+function goBack(){ if(!EMBEDDED){ history.back(); return; } closeTop(); }
+function closeTop(){ // 一番上に開いている画面を閉じる
+  if(!document.getElementById('lb').hidden) closeLB();
+  else if(!document.getElementById('detail').hidden) closeDetail();
+  else if(!document.getElementById('fav').hidden) favBack();
+}
 
 /* ================= 状態 ================= */
 let SITES=[]; const state={q:'',type:'',row:'',branch:'',status:'',sort:'kana',kmode:'site',product:'',src:''};
@@ -605,7 +658,7 @@ function renderDetail(){
     ${s.tiles.length?`<div class="tiles">${s.tiles.map(t=>`<span class="tile" data-tile="${esc(t)}" title="この商品の他の施工例を探す">${esc(t)}</span>`).join('')}</div>`:''}
     ${warn}
     ${tags.length>1?`<div class="ptabs"><button class="chip${!curTab?' on':''}" data-tab="">すべて ${curImgs.length}</button>${tags.map(t=>`<button class="chip${curTab===t?' on':''}" data-tab="${esc(t)}">${esc(t)} ${curImgs.filter(i=>i.tag===t).length}</button>`).join('')}</div>`:''}
-    <div class="pgrid">${imgs.map(i=>`<div class="pitem" data-img="${esc(i.id)}"><img data-thumb="${esc(i.id)}" alt=""><div class="cap">${esc(i.name)}${i.sub?' ／'+esc(i.sub):''}</div></div>`).join('')||'<div class="muted">表示できる写真がありません</div>'}</div>
+    <div class="pgrid">${imgs.map(i=>`<div class="pitem" data-img="${esc(i.id)}"><img data-thumb="${esc(i.id)}" alt="">${favHasKey(favKeyOf(s.key,i))?'<span class="star" title="お気に入りに入っています">★</span>':''}<div class="cap">${esc(i.name)}${i.sub?' ／'+esc(i.sub):''}</div></div>`).join('')||'<div class="muted">表示できる写真がありません</div>'}</div>
     ${prods.length?`<div class="sec"><h3>使用商品</h3><div class="tblwrap"><table class="tbl"><tr><th>商品名</th><th>形状</th><th>品番</th><th>使用場所</th></tr>${prods.map(p=>`<tr>${[0,1,2,3].map(k=>`<td>${esc(p[k]||'')}</td>`).join('')}</tr>`).join('')}</table></div></div>`:''}
     ${(a.designer||a.period)?`<div class="sec"><h3>物件情報</h3><dl class="kv">${a.designer?`<dt>設計</dt><dd>${esc(a.designer)}</dd>`:''}${a.period?`<dt>施工時期</dt><dd>${esc(a.period)}</dd>`:''}</dl></div>`:''}
     ${internal?internalSec(s,a):''}
@@ -672,13 +725,147 @@ async function showLB(){
   const i=lbList[lbIdx]; if(!i) return;
   const r=await getOne('images',i.id); revokeURL(lbURL); lbURL=await imgURL(r.full);
   zoomReset(false); $('lbImg').src=lbURL;
-  $('lbTitle').innerHTML=`${esc(cur?.name||'')}<br><small>${esc(i.name)}${i.sub?' ／'+esc(i.sub):''}　${lbIdx+1} / ${lbList.length}</small>`;
+  $('lbFav').classList.toggle('on',favHasKey(i.fk||favKeyOf(cur?.key,i))); $('lbFav').textContent=$('lbFav').classList.contains('on')?'★':'☆';
+  $('lbTitle').innerHTML=`${esc(i.siteName||cur?.name||'')}<br><small>${esc(i.name)}${i.sub?' ／'+esc(i.sub):''}　${lbIdx+1} / ${lbList.length}</small>`;
   $('lbStrip').querySelectorAll('img').forEach((im,k)=>im.classList.toggle('on',k===lbIdx));
   $('lbStrip').children[lbIdx]?.scrollIntoView({inline:'center',block:'nearest'});
   $('lbPrev').hidden=lbIdx===0; $('lbNext').hidden=lbIdx===lbList.length-1;
 }
+// お気に入りリストの写真を順番に全画面で見せる
+function openLBList(list,idx){
+  lbList=list; lbIdx=Math.max(0,idx);
+  $('lbStrip').innerHTML=lbList.map((i,k)=>`<img data-thumb="${esc(i.id)}" data-k="${k}" alt="">`).join('');
+  observeThumbs($('lbStrip')); $('lb').hidden=false; showLB(); pushView();
+}
 function stepLB(d){ const n=lbIdx+d; if(n<0||n>=lbList.length) return; lbIdx=n; showLB(); }
 function closeLB(){ zoomReset(false); $('lb').hidden=true; $('lbImg').removeAttribute('src'); revokeURL(lbURL);lbURL=null; }
+
+/* ================= お気に入り（お得意様別リスト） =================
+   リスト: {id, name, items:[{s:現場キー, b:サブフォルダ, n:写真名}], updated}
+   写真は「現場キー＋サブフォルダ＋写真名」で覚えるので、写真データを取り込み直しても消えない */
+let FAVS=[];
+const favKeyOf=(siteKey,im)=>`${siteKey}|${im.sub||''}|${im.name}`;
+const itemKey=it=>`${it.s}|${it.b||''}|${it.n}`;
+let FAV_SET=new Set();
+async function loadFavs(){ try{ FAVS=(await getAll('favs')).sort((a,b)=>b.updated-a.updated); }catch(e){ FAVS=[]; } FAV_SET=new Set(FAVS.flatMap(l=>l.items.map(itemKey))); updFavBtn(); }
+const favHasKey=k=>FAV_SET.has(k);
+function updFavBtn(){ $('favBtn').textContent=`★ お気に入り${FAVS.length?'（'+FAVS.length+'）':''}`; }
+async function saveFav(l){ l.updated=Date.now(); await putOne('favs',l); await loadFavs(); }
+const newFavList=name=>({id:'f'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),name,items:[],updated:Date.now()});
+const toItem=(siteKey,im)=>({s:siteKey,b:im.sub||'',n:im.name});
+
+// --- 追加ダイアログ ---
+let pick=null; // {items:[...], label}
+function openPicker(items,label){ pick={items,label}; $('fdTitle').textContent='お気に入りリストに追加'; $('fdSub').textContent=label; $('fdNew').value=''; renderPicker(); $('favDlg').showModal(); }
+function renderPicker(){
+  const keys=pick.items.map(itemKey);
+  $('fdLists').innerHTML=FAVS.length?FAVS.map(l=>{ const have=new Set(l.items.map(itemKey)); const n=keys.filter(k=>have.has(k)).length; const all=n===keys.length;
+    return `<button class="fdrow${all?' on':''}" data-fl="${l.id}"><span class="st">${all?'★':n?'◐':'☆'}</span><span class="nm">${esc(l.name)}</span><span class="ct">${n?`追加済み ${n}/${keys.length}`:''}　全${l.items.length}枚</span></button>`; }).join('')
+    :'<div class="muted">まだリストがありません。下でお得意様名を入れて作ってください。</div>';
+}
+$('fdLists').onclick=async e=>{ const b=e.target.closest('[data-fl]'); if(!b) return; const l=FAVS.find(x=>x.id===b.dataset.fl); if(!l) return;
+  const keys=new Set(pick.items.map(itemKey)), have=new Set(l.items.map(itemKey)); const all=[...keys].every(k=>have.has(k));
+  if(all) l.items=l.items.filter(it=>!keys.has(itemKey(it)));               // 全部入っていたら外す
+  else pick.items.forEach(it=>{ if(!have.has(itemKey(it))) l.items.push(it); }); // 足りない分を足す
+  await saveFav(l); renderPicker(); afterFavChange(); toast(all?`「${l.name}」から外しました`:`「${l.name}」に追加しました`); };
+$('fdCreate').onclick=async()=>{ const name=$('fdNew').value.trim(); if(!name){ $('fdNew').focus(); return; }
+  const l=newFavList(name); l.items=[...pick.items]; await saveFav(l); $('fdNew').value=''; renderPicker(); afterFavChange(); toast(`「${name}」を作って追加しました`); };
+$('fdNew').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); $('fdCreate').click(); } });
+$('fdClose').onclick=()=>$('favDlg').close();
+function afterFavChange(){ if(!$('lb').hidden) showLBStar(); if(cur&&!$('detail').hidden) renderDetail(); if(!$('fav').hidden) renderFav(); }
+function showLBStar(){ const i=lbList[lbIdx]; if(!i) return; const on=favHasKey(i.fk||favKeyOf(cur?.key,i)); $('lbFav').classList.toggle('on',on); $('lbFav').textContent=on?'★':'☆'; }
+$('dFav').onclick=()=>{ if(!cur) return; const imgs=curImgs.filter(i=>!curTab||i.tag===curTab); openPicker(imgs.map(i=>toItem(cur.key,i)),`「${cur.name}」の写真 ${imgs.length}枚${curTab?'（'+curTab+'）':''}`); };
+$('lbFav').onclick=e=>{ e.stopPropagation(); const i=lbList[lbIdx]; if(!i) return; const sk=i.siteKey||cur?.key; openPicker([toItem(sk,i)],`${i.siteName||cur?.name||''} ／ ${i.name}`); };
+
+// --- お気に入り画面（リスト一覧 → リストの中身） ---
+let favCur=null, favEdit=false, favRes=[];
+async function openFavs(){ await loadFavs(); favCur=null; favEdit=false; $('fav').hidden=false; await renderFav(); $('fav').scrollTop=0; pushView(); }
+function favBack(){ if(favCur){ favCur=null; favEdit=false; renderFav(); } else $('fav').hidden=true; }
+$('favBtn').onclick=openFavs;
+$('favBack').onclick=()=>goBack();
+// リストの写真を、今入っている写真データと突き合わせる
+async function resolveFav(l){
+  const bySite=new Map(); l.items.forEach(it=>{ if(!bySite.has(it.s)) bySite.set(it.s,[]); });
+  const found=new Map();
+  for(const sk of bySite.keys()){ const s=SITES.find(x=>x.key===sk); if(!s) continue;
+    (await imagesOf(s.id)).forEach(im=>found.set(favKeyOf(sk,im),{id:im.id,name:im.name,sub:im.sub,tag:im.tag,siteKey:sk,siteName:s.name,siteId:s.id,fk:favKeyOf(sk,im)})); }
+  return l.items.map(it=>found.get(itemKey(it))||{missing:true,name:it.n,siteKey:it.s,fk:itemKey(it)});
+}
+async function renderFav(){
+  if(!favCur){
+    $('favTitle').textContent='お気に入り（お得意様別）';
+    $('favHeadBtns').innerHTML='<button class="btn small" id="favNew">＋ 新しいリスト</button> <button class="btn small" id="favExp">リストを書き出す</button> <button class="btn small" id="favImp">リストを取り込む</button>';
+    const covers=new Map();
+    for(const l of FAVS){ const r=await resolveFav({items:l.items.slice(0,12)}); covers.set(l.id,r.filter(x=>!x.missing).slice(0,3)); }
+    $('favBody').innerHTML=FAVS.length?`<div class="favlists">${FAVS.map(l=>`<div class="favcard" data-open="${l.id}"><div class="covers">${(covers.get(l.id)||[]).map(c=>`<img data-thumb="${esc(c.id)}" alt="">`).join('')}</div><div class="fb"><div class="fn">${esc(l.name)}</div><div class="muted">写真 ${l.items.length}枚　更新 ${new Date(l.updated).toLocaleDateString('ja-JP')}</div></div></div>`).join('')}</div>`
+      :'<div class="empty"><h2>お気に入りリストがありません</h2><div>現場の画面の「★ リストに追加」や、写真を全画面で見ているときの ☆ ボタンで、お得意様ごとのリストに写真を入れられます。</div><div class="btns"><button class="btn primary" id="favNew2">＋ 新しいリストを作る</button></div></div>';
+    observeThumbs($('favBody')); return;
+  }
+  const l=FAVS.find(x=>x.id===favCur); if(!l){ favCur=null; return renderFav(); }
+  favRes=await resolveFav(l); const ok=favRes.filter(x=>!x.missing), miss=favRes.length-ok.length;
+  $('favTitle').textContent=l.name;
+  $('favHeadBtns').innerHTML=`<button class="btn small primary" id="favPlay" ${ok.length?'':'disabled'}>▶ 全画面で見せる</button>`;
+  $('favBody').innerHTML=`
+    <div class="favtools">
+      <input class="favname" id="favName" value="${esc(l.name)}" aria-label="リスト名">
+      <button class="btn small${favEdit?' primary':''}" id="favEditBtn">${favEdit?'並べ替え・削除を終わる':'並べ替え・削除'}</button>
+      <button class="btn small" id="favDel">このリストを削除</button>
+    </div>
+    ${miss?`<p class="muted">※ ${miss}枚は、今入っている写真データに見つかりません（写真データを取り込み直すと表示されることがあります）。</p>`:''}
+    <div class="pgrid">${favRes.map((r,k)=>r.missing
+      ?`<div class="pitem" style="aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--sub)" data-k="${k}"><span>写真なし<br>${esc(r.name)}</span>${favEdit?favEdBtns(k):''}</div>`
+      :`<div class="pitem" data-k="${k}"><span class="num">${k+1}</span><img data-thumb="${esc(r.id)}" alt=""><div class="cap">${esc(r.siteName)} ／ ${esc(r.name)}</div>${favEdit?favEdBtns(k):''}</div>`).join('')||'<div class="muted">まだ写真がありません。現場の画面から追加してください。</div>'}</div>`;
+  observeThumbs($('favBody'));
+}
+const favEdBtns=k=>`<div class="ed"><button data-mv="-1" data-k="${k}" aria-label="前へ">◀</button><button data-rm="${k}" aria-label="外す">✕</button><button data-mv="1" data-k="${k}" aria-label="後ろへ">▶</button></div>`;
+$('favHeadBtns').onclick=async e=>{
+  const id=e.target.id;
+  if(id==='favNew') favNewList();
+  else if(id==='favExp') exportFavs();
+  else if(id==='favImp'){ $('favInput').value=''; $('favInput').click(); }
+  else if(id==='favPlay'){ const list=favRes.filter(x=>!x.missing); if(list.length) openLBList(list,0); }
+};
+async function favNewList(){ const name=await askText('新しいリストの名前（お得意様名など）','例：〇〇建設 様'); if(!name) return; const l=newFavList(name); await saveFav(l); favCur=l.id; renderFav(); }
+$('favBody').onclick=async e=>{
+  if(e.target.id==='favNew2'){ favNewList(); return; }
+  const open=e.target.closest('[data-open]'); if(open){ favCur=open.dataset.open; favEdit=false; await renderFav(); $('fav').scrollTop=0; pushView(); return; }
+  const l=FAVS.find(x=>x.id===favCur); if(!l) return;
+  if(e.target.id==='favEditBtn'){ favEdit=!favEdit; renderFav(); return; }
+  if(e.target.id==='favDel'){ if(await ask(`リスト「${l.name}」を削除します。写真そのものは消えません。`,'削除する')){ await tx(['favs'],'readwrite',t=>t.objectStore('favs').delete(l.id)); await loadFavs(); favCur=null; renderFav(); toast('リストを削除しました'); } return; }
+  const mv=e.target.closest('[data-mv]'); if(mv){ const k=+mv.dataset.k, j=k+(+mv.dataset.mv); if(j<0||j>=l.items.length) return; [l.items[k],l.items[j]]=[l.items[j],l.items[k]]; await saveFav(l); renderFav(); return; }
+  const rm=e.target.closest('[data-rm]'); if(rm){ l.items.splice(+rm.dataset.rm,1); await saveFav(l); renderFav(); return; }
+  if(favEdit) return;
+  const it=e.target.closest('.pitem[data-k]'); if(it){ const r=favRes[+it.dataset.k]; if(r&&!r.missing){ const list=favRes.filter(x=>!x.missing); openLBList(list,list.indexOf(r)); } }
+};
+$('favBody').addEventListener('change',async e=>{ if(e.target.id!=='favName') return; const l=FAVS.find(x=>x.id===favCur); const v=e.target.value.trim(); if(l&&v&&v!==l.name){ l.name=v; await saveFav(l); $('favTitle').textContent=v; toast('名前を変えました'); } });
+
+// --- リストだけの書き出し・取り込み（PC⇔iPad） ---
+function mergeFavs(lists){ let add=0, upd=0; const map=new Map(FAVS.map(l=>[l.id,l]));
+  const out=[]; (lists||[]).forEach(l=>{ if(!l||!l.id||!Array.isArray(l.items)) return; const m=map.get(l.id); if(!m){ add++; out.push(l); } else if((l.updated||0)>(m.updated||0)){ upd++; out.push(l); } });
+  return {out,add,upd}; }
+async function applyFavs(lists){ const {out,add,upd}=mergeFavs(lists); if(out.length) await tx(['favs'],'readwrite',t=>out.forEach(l=>t.objectStore('favs').put(l))); await loadFavs(); return {add,upd}; }
+async function saveOrShare(blob,fn){
+  const file=new File([blob],fn,{type:blob.type||'application/octet-stream'});
+  if(IS_IOS&&navigator.canShare&&navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:fn}); return true; }catch(e){ if(e.name==='AbortError') return false; } }
+  if(EMBEDDED){ notice('この画面からはファイルを保存できません。'); return false; }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=fn; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),60000); return true;
+}
+async function exportFavs(){
+  if(!FAVS.length){ toast('書き出すリストがありません'); return; }
+  const d=new Date(); const fn=`お気に入りリスト_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.kyfav`;
+  const blob=new Blob([JSON.stringify({kind:'kyfav',v:1,created:d.toISOString(),lists:FAVS})],{type:'application/json'});
+  if(await saveOrShare(blob,fn)) toast(`「${fn}」を書き出しました（リスト${FAVS.length}件。写真は入っていません）`,6000);
+}
+async function importFavFile(f){
+  try{ const j=JSON.parse(await f.text()); if(j.kind!=='kyfav') throw new Error('お気に入りリストのファイル（.kyfav）ではありません');
+    const {add,upd}=await applyFavs(j.lists); renderFav(); notice(`リストを取り込みました。\n新しいリスト ${add}件／更新 ${upd}件\n（同じリストは、新しく更新された方を残します）`);
+  }catch(err){ notice('取り込みに失敗しました：'+err.message); }
+}
+// 入力欄つきの確認（リスト名など）
+function askText(msg,ph){ return new Promise(res=>{ $('fdTitle').textContent=msg; $('fdSub').textContent=''; $('fdLists').innerHTML=''; $('fdNew').value=''; $('fdNew').placeholder=ph||'';
+  const prev=$('fdCreate').onclick, prevClose=$('fdClose').onclick, oldTxt=$('fdCreate').textContent; $('fdCreate').textContent='作る';
+  const done=v=>{ $('fdCreate').onclick=prev; $('fdClose').onclick=prevClose; $('fdCreate').textContent=oldTxt; $('favDlg').close(); res(v); };
+  $('fdCreate').onclick=()=>{ const v=$('fdNew').value.trim(); if(v) done(v); else $('fdNew').focus(); }; $('fdClose').onclick=()=>done(''); $('favDlg').showModal(); }); }
 
 /* ================= 進捗 ================= */
 function prog(title,done,total,text){ $('progress').hidden=false; $('pTitle').textContent=title; $('pBar').style.width=(total?Math.round(done/total*100):0)+'%'; $('pText').textContent=text||''; }
@@ -886,7 +1073,7 @@ async function exportData(o){
       if(k%10===0) prog('書き出し中…',k,total,`${k} / ${total} 枚`);
     }
   }
-  const head=new TextEncoder().encode(JSON.stringify({v:1,created:new Date().toISOString(),sites,edits,images:meta}));
+  const head=new TextEncoder().encode(JSON.stringify({v:1,created:new Date().toISOString(),sites,edits,images:meta,favs:FAVS}));
   const len=new Uint8Array(4); new DataView(len.buffer).setUint32(0,head.length,true);
   const blob=new Blob([MAGIC,len,head,...parts],{type:'application/octet-stream'});
   const d=new Date(); const fn=`施工写真データ_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.kyphoto`;
@@ -910,6 +1097,7 @@ async function importData(file){
       if(k%5===0) prog('取り込み中…',k,head.images.length,`${k} / ${head.images.length} 枚`);
     }
     await tx(['sites','edits'],'readwrite',t=>{ head.sites.forEach(s=>t.objectStore('sites').put(s)); (head.edits||[]).forEach(e=>t.objectStore('edits').put(e)); });
+    if(head.favs?.length) await applyFavs(head.favs); // お気に入りリストは入れ替えずに合わせる（新しい方を残す）
     progEnd(); try{ await navigator.storage?.persist?.(); }catch(e){}
     await loadSites(); toast(`取り込み完了：${head.sites.length}現場・${head.images.length}枚`,5000);
   }catch(err){ progEnd(); console.error(err); notice('取り込みに失敗しました：'+(err.message||err)+(err.name==='QuotaExceededError'?'\n端末の空き容量が不足している可能性があります。':'')); }
@@ -958,9 +1146,10 @@ const pickData=()=>{ $('menu').hidden=true; $('dataInput').value=''; $('dataInpu
 $('mFolder').onclick=pickFolder; $('eFolder').onclick=pickFolder; $('mData').onclick=pickData; $('eData').onclick=pickData;
 $('mExport').onclick=()=>{ $('menu').hidden=true; if(EMBEDDED){ notice('この画面からはファイルを保存できません。\nパソコンに保存してある sekou_photo_viewer.html を開いて書き出してください。'); return; } openExport(); };
 document.addEventListener('contextmenu',e=>{ if(e.target.closest('img,.pitem,.card,.lb')) e.preventDefault(); });
-$('mClear').onclick=async()=>{ $('menu').hidden=true; if(!await ask('このブラウザに保存した施工写真データをすべて削除します。元の写真フォルダは消えません。よろしいですか？','削除する')) return; await clearStores(['sites','images','edits']); thumbURL.clear(); await loadSites(); toast('削除しました'); };
+$('mClear').onclick=async()=>{ $('menu').hidden=true; if(!await ask('このブラウザに保存した施工写真データをすべて削除します。元の写真フォルダは消えません（お気に入りリストは残ります）。よろしいですか？','削除する')) return; await clearStores(['sites','images','edits']); thumbURL.clear(); await loadSites(); toast('削除しました'); };
 $('dirInput').onchange=e=>{ const fs=[...e.target.files]; if(fs.length) importEntries(fs.map(f=>({path:f.webkitRelativePath||f.name,file:f}))).catch(err=>{progEnd();notice('読み込みに失敗しました：'+err.message);}); };
 $('dataInput').onchange=e=>{ const f=e.target.files[0]; if(f) importData(f); };
+$('favInput').onchange=e=>{ const f=e.target.files[0]; if(f) importFavFile(f); };
 // ライトボックス操作
 $('lbClose').onclick=()=>goBack();
 $('lbPrev').onclick=e=>{e.stopPropagation();stepLB(-1);}; $('lbNext').onclick=e=>{e.stopPropagation();stepLB(1);};
@@ -1014,13 +1203,13 @@ window.addEventListener('mousemove',e=>{ if(!md) return; Z.x=md.px+e.clientX-md.
 window.addEventListener('mouseup',()=>{ md=null; });
 document.addEventListener('keydown',e=>{
   if(!$('lb').hidden){ if(e.key==='ArrowRight') stepLB(1); else if(e.key==='ArrowLeft') stepLB(-1); else if(e.key==='Escape') goBack(); return; }
-  if(!$('detail').hidden&&e.key==='Escape'&&!$('editDlg').open) goBack();
+  if((!$('detail').hidden||!$('fav').hidden)&&e.key==='Escape'&&!$('editDlg').open&&!$('favDlg').open) goBack();
   if((e.ctrlKey||e.metaKey)&&(e.key==='p'||e.key==='s')) e.preventDefault();
 });
-window.addEventListener('popstate',()=>{ if(!$('lb').hidden){ closeLB(); return; } if(!$('detail').hidden) closeDetail(); });
+window.addEventListener('popstate',()=>closeTop());
 document.addEventListener('dragstart',e=>{ if(e.target.tagName==='IMG') e.preventDefault(); });
 
-loadSites().catch(err=>{ console.error(err); $('empty').hidden=false; toast('ブラウザの保存領域を開けませんでした：'+err.message,6000); });
+loadSites().then(loadFavs).catch(err=>{ console.error(err); $('empty').hidden=false; toast('ブラウザの保存領域を開けませんでした：'+err.message,6000); });
 </script>
 <script>if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost')){navigator.serviceWorker.register('sw.js').catch(function(e){console.warn('sw',e);});}</script>
 </body>
