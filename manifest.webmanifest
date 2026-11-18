@@ -1,0 +1,21 @@
+{
+ "name": "施工写真ビューア",
+ "short_name": "施工写真",
+ "start_url": "./",
+ "scope": "./",
+ "display": "standalone",
+ "background_color": "#f4f5f7",
+ "theme_color": "#0f6e8c",
+ "icons": [
+  {
+   "src": "icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png"
+  },
+  {
+   "src": "icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png"
+  }
+ ]
+}
